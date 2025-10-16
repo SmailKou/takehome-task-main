@@ -42,6 +42,9 @@ function handlePrefixSearch(App $app, string $prefix): array
 
 /**
  * Route the request based on parameters
+ *
+ * @param $app
+ * @return array
  */
 function routeRequest(App $app): array
 {
