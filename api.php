@@ -15,20 +15,9 @@ $app = new App();
 $title = $_GET['title'];
 $prefixSearch = $_GET['prefixsearch'];
 
-// Extract parameters checking for better readability
-$hasTitle = isset($_GET['title']);
-$hasPrefixSearch = isset($_GET['prefixsearch']);
-
 header( 'Content-Type: application/json' );
-
-if (!$hasTitle && !$hasPrefixSearch) {
-	echo json_encode( [ 'content' => $app->getListOfArticles() ] );
-} elseif ($hasPrefixSearch) {
-	$matchingArticles = handlePrefixSearch($app, $prefixSearch);
-	echo json_encode( [ 'content' => $matchingArticles ] );
-} else {
-	echo json_encode( [ 'content' => $app->fetch( $_GET ) ] );
-}
+$response = routeRequest($app);
+echo json_encode($response);
 
 /**
  * Handles prefix search with case-insensitive matching
@@ -49,4 +38,25 @@ function handlePrefixSearch(App $app, string $prefix): array
 	}
 
 	return $matchingArticles;
+}
+
+/**
+ * Route the request based on parameters
+ */
+function routeRequest(App $app): array
+{
+	$hasTitle = isset($_GET['title']);
+	$hasPrefixSearch = isset($_GET['prefixsearch']);
+
+	if (!$hasTitle && !$hasPrefixSearch) {
+		// No parameters - list all articles
+		return ['content' => $app->getListOfArticles()];
+	}
+
+	if ($hasPrefixSearch) {
+		// Prefix search route
+		return ['content' => handlePrefixSearch($app, $_GET['prefixsearch'])];
+	}
+
+	return ['content' => $app->fetch($_GET)];
 }
