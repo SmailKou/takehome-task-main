@@ -1,13 +1,19 @@
 <?php
 
+/**
+ * Article Search and Retrieval API
+ * @file api.php
+ */
+
 use App\App;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
 $app = new App();
-// TODO A: Improve readability and clean up the following code to prepare for adding new handlers and routes.
-// TODO B: Address performance concerns.
-// TODO C: Identify and solve any potential security vulnerabilities in this code.
+
+// Extract parameters checking for better readability
+$hasTitle = isset($_GET['title']);
+$hasPrefixSearch = isset($_GET['prefixsearch']);
 
 header( 'Content-Type: application/json' );
 if ( !isset( $_GET['title'] ) && !isset( $_GET['prefixsearch'] ) ) {
