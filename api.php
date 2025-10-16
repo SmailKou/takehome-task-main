@@ -11,13 +11,25 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 $app = new App();
 
-// Define useful variables
-$title = $_GET['title'];
-$prefixSearch = $_GET['prefixsearch'];
-
 header( 'Content-Type: application/json' );
 $response = routeRequest($app);
-echo json_encode($response);
+echo json_encode($response, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
+/**
+ * Sanitize user input to prevent XSS and injection attacks
+ */
+function sanitizeInput(string $input): string
+{
+	return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+}
+
+/**
+ * Validate prefix search parameter
+ */
+function isValidPrefix(string $prefix): bool
+{
+	return preg_match('/^[a-zA-Z0-9\s\-_]{1,50}$/', $prefix);
+}
 
 /**
  * Handles prefix search with case-insensitive matching
@@ -28,6 +40,11 @@ echo json_encode($response);
  */
 function handlePrefixSearch(App $app, string $prefix): array
 {
+	// Validate input before processing
+	if (!isValidPrefix($prefix)) {
+		return ['error' => 'Invalid search parameter'];
+	}
+
 	$articlesList = $app->getListOfArticles();
 	$matchingArticles = [];
 
@@ -58,7 +75,8 @@ function routeRequest(App $app): array
 
 	if ($hasPrefixSearch) {
 		// Prefix search route
-		return ['content' => handlePrefixSearch($app, $_GET['prefixsearch'])];
+		$prefix = sanitizeInput($_GET['prefixsearch']);
+		return ['content' => handlePrefixSearch($app, $prefix)];
 	}
 
 	return ['content' => $app->fetch($_GET)];
