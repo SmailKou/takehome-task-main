@@ -11,7 +11,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 $app = new App();
 
-header( 'Content-Type: application/json' );
+header('Content-Type: application/json');
 $response = routeRequest($app);
 echo json_encode($response, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
@@ -51,6 +51,38 @@ function isValidPrefix(string $prefix): bool
 }
 
 /**
+ * Simple file-based cache for article list since I am not allowed to use a library
+ */
+function getCachedArticleList(App $app, int $ttl = 300): array // 5 minutes TTL
+{
+	$cacheFile = __DIR__ . '/cache/articles_list.cache';
+	$cacheDir = dirname($cacheFile);
+
+	if (!is_dir($cacheDir)) {
+		mkdir($cacheDir, 0755, true);
+	}
+
+	if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $ttl) {
+		$cachedData = file_get_contents($cacheFile);
+		$data = json_decode($cachedData, true);
+		if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
+			return $data;
+		}
+	}
+
+	// Cache miss or invalid - fetch fresh data
+	$articles = $app->getListOfArticles();
+
+	try {
+		file_put_contents($cacheFile, json_encode($articles), LOCK_EX);
+	} catch (Exception $e) {
+		error_log($e->getMessage());
+	}
+
+	return $articles;
+}
+
+/**
  * Handles prefix search with case-insensitive matching
  *
  * @param App $app
@@ -64,7 +96,7 @@ function handlePrefixSearch(App $app, string $prefix): array
 		return ['error' => 'Invalid search parameter'];
 	}
 
-	$articlesList = $app->getListOfArticles();
+	$articlesList = getCachedArticleList($app);
 	$matchingArticles = [];
 
 	foreach ($articlesList as $article) {
@@ -89,7 +121,7 @@ function routeRequest(App $app): array
 
 	if (!$hasTitle && !$hasPrefixSearch) {
 		// No parameters - list all articles
-		return ['content' => $app->getListOfArticles()];
+		return ['content' => getCachedArticleList($app)];
 	}
 
 	if ($hasPrefixSearch) {
