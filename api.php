@@ -16,11 +16,16 @@ $response = routeRequest($app);
 echo json_encode($response, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
 /**
- * Sanitize user input to prevent XSS and injection attacks
+ * Sanitize user input
  */
 function sanitizeInput(string $input): string
 {
-	return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+	$input = trim($input);
+
+	// Remove any remaining control characters
+	$input = preg_replace('/[\\x00-\\x08\\x0b-\\x1f\\x7f]/', '', $input);
+
+	return $input;
 }
 
 /**
@@ -28,7 +33,21 @@ function sanitizeInput(string $input): string
  */
 function isValidPrefix(string $prefix): bool
 {
-	return preg_match('/^[a-zA-Z0-9\s\-_]{1,50}$/', $prefix);
+	if ($prefix === '' || strlen($prefix) > 255) {
+		return false;
+	}
+
+	// Check for possible path traversal attempts
+	if (strpos($prefix, '..') !== false || strpos($prefix, "\0") !== false) {
+		return false;
+	}
+
+	// Check for potentially dangerous patterns
+	if (preg_match('/[<>"`|\\x00-\\x08\\x0b-\\x1f\\x7f]/', $prefix)) {
+		return false;
+	}
+
+	return true;
 }
 
 /**
